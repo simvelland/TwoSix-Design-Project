@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Power Prediction</title>
+
+    <!-- Leaflet CSS for interactive map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; margin: 50px; }
+        input, button { margin: 10px; padding: 5px; width: 200px; }
+        button { background-color: #4CAF50; color: white; border: none; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        #result { font-weight: bold; margin-top: 20px; }
+        #map { height: 400px; width: 80%; margin: auto; border: 1px solid black; }
+    </style>
+</head>
+<body>
+
+    <h2>Solar Power Prediction</h2>
+
+    <div id="map"></div> <!-- Interactive Map -->
+
+    <p><strong>Selected Location:</strong> <span id="location">None</span></p>
+
+    <label for="irradiance">Solar Irradiance (Approx):</label>
+    <input type="number" id="irradiance" step="0.1">
+    <br>
+
+    <label for="temp">Temperature (°C):</label>
+    <input type="number" id="temp" step="0.1">
+    <br>
+
+    <label for="humidity">Relative Humidity (%):</label>
+    <input type="number" id="humidity" step="0.1">
+    <br>
+
+    <label for="wind">Wind Speed (m/s):</label>
+    <input type="number" id="wind" step="0.1">
+    <br>
+
+    <label for="pressure">Surface Pressure (hPa):</label>
+    <input type="number" id="pressure" step="0.1">
+    <br>
+
+    <label for="cloud">Cloud Amount (%):</label>
+    <input type="number" id="cloud" step="0.1">
+    <br>
+    
+    <button onclick="predict()">Predict</button>
+
+    <h3>Predicted Daily Solar Power: <span id="result">N/A</span></h3>
+
+    <!-- Leaflet JS for Map -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <script>
+        // WeatherAPI Key
+        const API_KEY = "78abce0c03004028baf61714250603";
+
+        // Initialize the map
+        var map = L.map('map').setView([20, 0], 2); // Default world view
+
+        // Add OpenStreetMap tiles
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        var marker;
+
+        // Function to fetch real-time weather data from WeatherAPI
+        function getWeather(lat, lon) {
+            let weather_url = `https://api.weatherapi.com/v1/current.json?key=${API_KEY}&q=${lat},${lon}&aqi=no`;
+
+            fetch(weather_url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Failed to fetch weather data. Status: " + response.status);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log("Weather Data:", data); // Debugging output
+
+                // Populate form fields with weather data
+                document.getElementById("irradiance").value = 100 - data.current.cloud; // Approximate solar irradiance
+                document.getElementById("temp").value = data.current.temp_c;
+                document.getElementById("humidity").value = data.current.humidity;
+                document.getElementById("wind").value = (data.current.wind_kph / 3.6).toFixed(2); // Convert km/h to m/s
+                document.getElementById("pressure").value = data.current.pressure_mb;
+                document.getElementById("cloud").value = data.current.cloud;
+            })
+            .catch(error => console.error("Error fetching weather data:", error));
+        }
+
+        // Function to handle map click
+        function onMapClick(e) {
+            let lat = e.latlng.lat.toFixed(2);
+            let lon = e.latlng.lng.toFixed(2);
+            document.getElementById("location").innerText = `Lat: ${lat}, Lon: ${lon}`;
+
+            // Remove previous marker if exists
+            if (marker) map.removeLayer(marker);
+
+            // Add new marker
+            marker = L.marker([lat, lon]).addTo(map);
+
+            // Fetch weather data for selected location
+            getWeather(lat, lon);
+        }
+
+        // Attach event listener to map
+        map.on('click', onMapClick);
+
+        // Function to send prediction request
+        function predict() {
+            let data = {
+                "Solar_Irradiance": parseFloat(document.getElementById("irradiance").value),
+                "Temperature_2m": parseFloat(document.getElementById("temp").value),
+                "Relative_Humidity_2m": parseFloat(document.getElementById("humidity").value),
+                "Wind_Speed_2M": parseFloat(document.getElementById("wind").value),
+                "Surface_Pressure": parseFloat(document.getElementById("pressure").value),
+                "Cloud_Amount": parseFloat(document.getElementById("cloud").value)
+            };
+
+            fetch("https://engr-442-phase-1.onrender.com/predict/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error("Prediction request failed.");
+                }
+                return response.json();
+            })
+            .then(data => { 
+                document.getElementById("result").innerText = data.predicted_daily_solar_power; 
+            })
+            .catch(error => { console.error("Error:", error); });
+        }
+    </script>
+
+</body>
+</html>

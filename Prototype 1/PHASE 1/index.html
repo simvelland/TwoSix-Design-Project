@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solar Power Prediction</title>
+
+    <style>
+        body { 
+            font-family: Arial, Helvetica, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+        input {
+            margin: 10px;
+            padding: 5px;
+            width: 200px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #result{
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Solar Power Prediction</h2>
+
+    <label for="irradiance">Solar Irradiance:</label>
+    <input type="number" id="irradiance" step="0.1">
+    <br>
+
+    <label for="temp">Temperature (2m):</label>
+    <input type="number" id="temp" step="0.1">
+    <br>
+
+    <label for="humidity">Relative Humidity (2m):</label>
+    <input type="number" id="humidity" step="0.1">
+    <br>
+
+    <label for="wind">Wind Speed (2m):</label>
+    <input type="number" id="wind" step="0.1">
+    <br>
+
+    <label for="pressure">Surface Pressure:</label>
+    <input type="number" id="pressure" step="0.1">
+    <br>
+
+    <label for="cloud">Cloud Amount:</label>
+    <input type="number" id="cloud" step="0.1">
+    <br>
+    
+    <button onclick="predict()">Predict</button>
+
+    <h3>Predicted Daily Solar Power: <span id="result"></span></h3>
+
+    <script>
+        function predict() {
+            let data = {
+                "Solar_Irradiance": parseFloat(document.getElementById("irradiance").value),
+                "Temperature_2m": parseFloat(document.getElementById("temp").value),
+                "Relative_Humidity_2m": parseFloat(document.getElementById("humidity").value),
+                "Wind_Speed_2M": parseFloat(document.getElementById("wind").value),
+                "Surface_Pressure": parseFloat(document.getElementById("pressure").value),
+                "Cloud_Amount": parseFloat(document.getElementById("cloud").value)
+            };
+
+            fetch("https://engr-442-phase-1.onrender.com/predict/", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => { document.getElementById("result").innerText = data.predicted_daily_solar_power; })
+            .catch(error => { console.error("Error:", error); });
+        }
+    </script>
+</body>
+</html>
